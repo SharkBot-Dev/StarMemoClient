@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "StarMemoClient",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "identifier": "com.starmemo.client",
   "build": {
     "frontendDist": "../src"
@@ -33,6 +33,11 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    },
+    "windows": {
+      "wix": {
+        "language": "ja-JP" 
+      }
     }
   }
 }
