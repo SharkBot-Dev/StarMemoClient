@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Memo Client</title>
+    <style>
+        :root {
+            color: #e7edf7;
+            background: #0d1117;
+            color-scheme: dark;
+            font-family: "Segoe UI", system-ui, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-width: 320px;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .app {
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            transition: grid-template-columns 160ms ease;
+        }
+
+        .app.sidebar-collapsed {
+            grid-template-columns: 54px minmax(0, 1fr);
+        }
+
+        .sidebar {
+            display: flex;
+            min-height: 0;
+            flex-direction: column;
+            gap: 16px;
+            padding: 18px;
+            border-right: 1px solid #2a3443;
+            background: #111821;
+            box-shadow: 1px 0 0 rgba(0, 0, 0, 0.28);
+            overflow: hidden;
+            transition: padding 160ms ease;
+            z-index: 2;
+        }
+
+        .app.sidebar-collapsed .sidebar {
+            gap: 10px;
+            padding: 14px 8px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .app.sidebar-collapsed .brand {
+            justify-content: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .sidebar-toggle {
+            display: grid;
+            width: 34px;
+            min-width: 34px;
+            height: 34px;
+            place-items: center;
+            padding: 0;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .count {
+            min-width: 28px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            color: #b8c4d6;
+            background: #202a37;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .app.sidebar-collapsed h1,
+        .app.sidebar-collapsed .count,
+        .app.sidebar-collapsed form,
+        .app.sidebar-collapsed .instances {
+            display: none;
+        }
+
+        form {
+            display: grid;
+            gap: 10px;
+        }
+
+        label {
+            display: grid;
+            gap: 6px;
+            color: #b8c4d6;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            min-height: 36px;
+            border: 1px solid #303b4d;
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: #edf3fb;
+            background: #0d131c;
+            font: inherit;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #5aa2ff;
+            box-shadow: 0 0 0 3px rgba(90, 162, 255, 0.22);
+        }
+
+        .form-actions,
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            min-height: 34px;
+            border: 1px solid #303b4d;
+            border-radius: 6px;
+            padding: 7px 10px;
+            color: #dce6f3;
+            background: #18212c;
+            font: inherit;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            border-color: #4a5a70;
+            background: #202b39;
+        }
+
+        .primary {
+            border-color: #4b93f4;
+            color: #ffffff;
+            background: #2f75d1;
+        }
+
+        .primary:hover {
+            border-color: #62a6ff;
+            background: #3f86e2;
+        }
+
+        .secondary {
+            flex: 1;
+        }
+
+        .danger {
+            color: #ff8a8a;
+        }
+
+        .status {
+            min-height: 18px;
+            color: #ff8a8a;
+            font-size: 12px;
+        }
+
+        .instances {
+            display: grid;
+            min-height: 0;
+            gap: 8px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        .instance {
+            display: grid;
+            gap: 8px;
+            border: 1px solid #273244;
+            border-radius: 8px;
+            padding: 10px;
+            background: #151e29;
+        }
+
+        .instance.active {
+            border-color: #4b93f4;
+            background: #172942;
+        }
+
+        .instance-title {
+            overflow: hidden;
+            color: #f2f6fb;
+            font-size: 14px;
+            font-weight: 700;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .instance-url {
+            overflow: hidden;
+            color: #93a4ba;
+            font-size: 12px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .empty {
+            padding: 18px 10px;
+            border: 1px dashed #3b485c;
+            border-radius: 8px;
+            color: #97a7ba;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .webview-shim {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+            background: #0d1117;
+        }
+
+        .placeholder {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            color: #97a7ba;
+            font-size: 14px;
+            text-align: center;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>星空メモ</h1>
+                <span class="count" id="count">0</span>
+                <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="インスタンス一覧を閉じる" title="インスタンス一覧を閉じる">&lt;</button>
+            </div>
+
+            <form id="instance-form">
+                <label>
+                    名前
+                    <input id="name-input" autocomplete="off" placeholder="Local memo">
+                </label>
+                <label>
+                    URL
+                    <input id="url-input" autocomplete="off" inputmode="url" placeholder="https://star.sharkbot.jp/">
+                </label>
+                <label>
+                    ユーザー名
+                    <input id="username-input" autocomplete="username" placeholder="name@example.com">
+                </label>
+                <label>
+                    パスワード
+                    <input id="password-input" autocomplete="current-password" type="password">
+                </label>
+                <div class="form-actions">
+                    <button class="primary" id="save-button" type="submit">保存</button>
+                    <button class="secondary" id="cancel-button" type="button" hidden>キャンセル</button>
+                </div>
+                <div class="status" id="status" role="status"></div>
+            </form>
+
+            <div class="instances" id="instances"></div>
+        </aside>
+
+        <main class="webview-shim" id="webview-area">
+            <div class="placeholder" id="placeholder">サイドバーにURLを保存するとここに表示されます。</div>
+        </main>
+    </div>
+
+    <script>
+        const STORAGE_KEY = "star-memo-client.instances";
+        const SIDEBAR_COLLAPSED_KEY = "star-memo-client.sidebar-collapsed";
+
+        const app = document.querySelector("#app");
+        const form = document.querySelector("#instance-form");
+        const nameInput = document.querySelector("#name-input");
+        const urlInput = document.querySelector("#url-input");
+        const usernameInput = document.querySelector("#username-input");
+        const passwordInput = document.querySelector("#password-input");
+        const saveButton = document.querySelector("#save-button");
+        const cancelButton = document.querySelector("#cancel-button");
+        const sidebarToggle = document.querySelector("#sidebar-toggle");
+        const instancesEl = document.querySelector("#instances");
+        const countEl = document.querySelector("#count");
+        const placeholder = document.querySelector("#placeholder");
+        const statusEl = document.querySelector("#status");
+
+        const invoke = window.__TAURI__?.core?.invoke;
+
+        let instances = loadInstances();
+        let activeId = instances[0]?.id ?? null;
+        let editingId = null;
+        let isSidebarCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+
+        function setStatus(message) {
+            statusEl.textContent = message;
+        }
+
+        function loadInstances() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function saveInstances() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(instances));
+        }
+
+        function normalizeUrl(value) {
+            const trimmed = value.trim();
+            if (!trimmed) return "";
+            if (/^https?:\/\//i.test(trimmed)) return trimmed;
+            return `https://${trimmed}`;
+        }
+
+        function getSidebarWidth() {
+            return Math.round(document.querySelector(".sidebar").getBoundingClientRect().width);
+        }
+
+        async function callTauri(command, payload) {
+            if (!invoke) {
+                throw new Error("Tauri API is not available.");
+            }
+            return invoke(command, payload);
+        }
+
+        async function syncWebviewBounds() {
+            await callTauri("set_webview_bounds", {
+                sidebarWidth: getSidebarWidth(),
+                width: window.innerWidth,
+                height: window.innerHeight,
+            });
+        }
+
+        function applySidebarState(syncBounds = true) {
+            app.classList.toggle("sidebar-collapsed", isSidebarCollapsed);
+            sidebarToggle.textContent = isSidebarCollapsed ? ">" : "<";
+            sidebarToggle.setAttribute(
+                "aria-label",
+                isSidebarCollapsed ? "インスタンス一覧を開く" : "インスタンス一覧を閉じる",
+            );
+            sidebarToggle.title = sidebarToggle.getAttribute("aria-label");
+            localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(isSidebarCollapsed));
+
+            if (syncBounds) {
+                window.clearTimeout(window.__sidebarTimer);
+                window.__sidebarTimer = window.setTimeout(() => {
+                    syncWebviewBounds().catch((error) => setStatus(String(error)));
+                }, 180);
+            }
+        }
+
+        async function openActiveInstance() {
+            const active = instances.find((instance) => instance.id === activeId);
+            placeholder.hidden = Boolean(active);
+
+            if (!active) {
+                setStatus("");
+                return;
+            }
+
+            try {
+                await syncWebviewBounds();
+                await callTauri("open_instance_url", {
+                    url: active.url,
+                    username: active.username || null,
+                    password: active.password || null,
+                });
+                setStatus("");
+            } catch (error) {
+                setStatus(String(error));
+                placeholder.hidden = false;
+            }
+        }
+
+        function resetForm() {
+            editingId = null;
+            form.reset();
+            saveButton.textContent = "保存";
+            cancelButton.hidden = true;
+        }
+
+        function renderInstances() {
+            countEl.textContent = instances.length;
+
+            if (instances.length === 0) {
+                instancesEl.innerHTML = '<div class="empty">保存済みインスタンスはありません。</div>';
+                placeholder.hidden = false;
+                return;
+            }
+
+            instancesEl.replaceChildren(...instances.map((instance) => {
+                const item = document.createElement("section");
+                item.className = `instance${instance.id === activeId ? " active" : ""}`;
+
+                const title = document.createElement("div");
+                title.className = "instance-title";
+                title.textContent = instance.name;
+
+                const url = document.createElement("div");
+                url.className = "instance-url";
+                url.textContent = instance.url;
+
+                const account = document.createElement("div");
+                account.className = "instance-url";
+                account.textContent = instance.username ? `ユーザー: ${instance.username}` : "ユーザー未設定";
+
+                const actions = document.createElement("div");
+                actions.className = "item-actions";
+
+                const openButton = document.createElement("button");
+                openButton.type = "button";
+                openButton.textContent = "開く";
+                openButton.addEventListener("click", () => {
+                    activeId = instance.id;
+                    renderInstances();
+                    openActiveInstance();
+                });
+
+                const editButton = document.createElement("button");
+                editButton.type = "button";
+                editButton.textContent = "編集";
+                editButton.addEventListener("click", () => {
+                    editingId = instance.id;
+                    nameInput.value = instance.name;
+                    urlInput.value = instance.url;
+                    usernameInput.value = instance.username || "";
+                    passwordInput.value = instance.password || "";
+                    saveButton.textContent = "更新";
+                    cancelButton.hidden = false;
+                    nameInput.focus();
+                });
+
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "danger";
+                deleteButton.textContent = "削除";
+                deleteButton.addEventListener("click", () => {
+                    const index = instances.findIndex((current) => current.id === instance.id);
+                    instances = instances.filter((current) => current.id !== instance.id);
+                    if (activeId === instance.id) {
+                        activeId = instances[Math.max(0, index - 1)]?.id ?? instances[0]?.id ?? null;
+                    }
+                    saveInstances();
+                    resetForm();
+                    renderInstances();
+                    openActiveInstance();
+                });
+
+                actions.append(openButton, editButton, deleteButton);
+                item.append(title, url, account, actions);
+                return item;
+            }));
+        }
+
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            const url = normalizeUrl(urlInput.value);
+            const name = nameInput.value.trim() || url;
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            if (!url) {
+                urlInput.focus();
+                return;
+            }
+
+            if (editingId) {
+                instances = instances.map((instance) => {
+                    if (instance.id !== editingId) return instance;
+                    return { ...instance, name, url, username, password };
+                });
+                activeId = editingId;
+            } else {
+                const instance = {
+                    id: crypto.randomUUID(),
+                    name,
+                    url,
+                    username,
+                    password,
+                    createdAt: new Date().toISOString(),
+                };
+                instances = [instance, ...instances];
+                activeId = instance.id;
+            }
+
+            saveInstances();
+            resetForm();
+            renderInstances();
+            openActiveInstance();
+        });
+
+        cancelButton.addEventListener("click", resetForm);
+
+        sidebarToggle.addEventListener("click", () => {
+            isSidebarCollapsed = !isSidebarCollapsed;
+            applySidebarState();
+        });
+
+        window.addEventListener("resize", () => {
+            window.clearTimeout(window.__resizeTimer);
+            window.__resizeTimer = window.setTimeout(() => {
+                syncWebviewBounds().catch((error) => setStatus(String(error)));
+            }, 80);
+        });
+
+        applySidebarState(false);
+        renderInstances();
+        openActiveInstance();
+    </script>
+</body>
+</html>
